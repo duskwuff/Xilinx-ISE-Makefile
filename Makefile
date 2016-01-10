@@ -1,74 +1,89 @@
-XILINX = /cygdrive/c/Xilinx/14.4/ISE_DS/ISE/bin/nt64
+## Uncomment these lines and set them appropriately.
 
-XST = $(XILINX)/xst
-NGDBUILD = $(XILINX)/ngdbuild
-MAP = $(XILINX)/map
-PAR = $(XILINX)/par
-BITGEN = $(XILINX)/bitgen
-PERL = perl
+#PROJECT = <project name>
+#TOPLEVEL = <top-level module name>
+#CONSTRAINTS = <constraints file name>.ucf
+#TARGET_PART = <part name, e.g. xc6slx9-2-tqg144>
 
-DIGILENT_DEVICE_NAME = Nexys2
 
-FPGA_PART = xc3s1200e-fg320-4
+## Where are the Xilinx tools installed?
 
-BITFILE = blinky.bit
-TOPMODULE = toplevel
-VSOURCES = toplevel.v
-CONSTRAINTS = nexys2.ucf
+#(Linux) XILINX = /opt/xilinx/14.7/ISE_DS/ISE/bin/lin
+#(Windows) XILINX = /cygdrive/c/Xilinx/14.7/ISE_DS/ISE/bin/nt64
 
-BITGEN_OPTS += -g UnusedPin:Pullnone
-BITGEN_OPTS += -g StartupClk:JtagClk
-BITGEN_OPTS += -g Compress
 
-##############################################################################
+## What are your HDL source files? Repeat this line for each file.
 
-COMMON_OPTS += -intstyle xflow
-RUNNING = echo -e "\n\n\e[1;35m>>>> Running $(1)\e[m"
+#VSOURCE += example.v
+
+
+## These settings are probably fine for most projects.
+
+COMMON_OPTS = -intstyle xflow
+NGDBUILD_OPTS =
+MAP_OPTS = -mt 2
+PAR_OPTS = -mt 2
+TRCE_OPTS = -e
+BITGEN_OPTS = -g Compress
+
+
+###########################################################################
+
+BITFILE = build/$(PROJECT).bit
+
+RUN = @echo -ne "\n\n\e[1;33m======== $(1) ========\e[m\n\n"; \
+	cd build && $(XILINX)/$(1)
 
 default: $(BITFILE)
 
 clean:
-	rm -rf build/
+	rm -rf build
 
-prog: $(BITFILE)
-	djtgcfg -d $(DIGILENT_DEVICE_NAME) -i 0 -f $(BITFILE) prog
+build/$(PROJECT).prj: Makefile
+	@echo "Updating $@"
+	@mkdir -p build
+	@rm -f $@
+	@$(foreach file,$(VSOURCE),echo "verilog work \"../$(file)\"" >> $@;)
 
-build/project.prj: Makefile
-	test -d build || mkdir build
-	$(PERL) generate_project.pl build/project.prj $(addprefix ../src/,$(VSOURCES))
-
-build/project.scr: Makefile
-	test -d build || mkdir build
-	$(PERL) generate_script.pl build/project.scr \
-	    "-ifn project.prj" \
+build/$(PROJECT).scr: Makefile
+	@echo "Updating $@"
+	@mkdir -p build
+	@rm -f $@
+	@echo "run" \
+	    "-ifn $(PROJECT).prj" \
+	    "-ofn $(PROJECT).ngc" \
 	    "-ifmt mixed" \
-	    "-top $(TOPMODULE)" \
-	    "-ofn project.ngc" \
+	    "-top $(TOPLEVEL)" \
 	    "-ofmt NGC" \
-	    "-p $(FPGA_PART)"
+	    "-p $(TARGET_PART)" \
+	    > build/$(PROJECT).scr
 
-build/project.ngc: build/project.prj build/project.scr $(addprefix src/,$(VSOURCES))
-	@touch build/stamp.ngc ; $(call RUNNING,Xst)
-	cd build ; $(XST) $(COMMON_OPTS) $(XST_OPTS) -ifn project.scr
-	@test build/project.ngc -nt build/stamp.ngc
+$(BITFILE): Makefile $(VSOURCE) $(CONSTRAINTS) build/$(PROJECT).prj build/$(PROJECT).scr
+	@mkdir -p build
+	$(call RUN,xst) $(COMMON_OPTS) \
+	    -ifn $(PROJECT).scr
+	$(call RUN,ngdbuild) $(COMMON_OPTS) $(NGDBUILD_OPTS) \
+	    -p $(TARGET_PART) -uc ../$(CONSTRAINTS) \
+	    $(PROJECT).ngc $(PROJECT).ngd
+	$(call RUN,map) $(COMMON_OPTS) $(MAP_OPTS) \
+	    -p $(TARGET_PART) \
+	    -w $(PROJECT).ngd -o $(PROJECT).map.ncd $(PROJECT).pcf
+	$(call RUN,par) $(COMMON_OPTS) $(PAR_OPTS) \
+	    -w $(PROJECT).map.ncd $(PROJECT).ncd $(PROJECT).pcf
+	$(call RUN,bitgen) $(COMMON_OPTS) $(BITGEN_OPTS) \
+	    -w $(PROJECT).ncd $(PROJECT).bit
+	@echo -ne "\e[1;32m======== OK ========\e[m\n"
 
-build/project.ngd: build/project.ngc src/$(CONSTRAINTS)
-	@touch build/stamp.ngd ; $(call RUNNING,ngdbuild)
-	cd build ; $(NGDBUILD) $(COMMON_OPTS) $(NGD_OPTS) -p $(FPGA_PART) -uc ../src/$(CONSTRAINTS) project.ngc project.ngd
-	@test build/project.ngd -nt build/stamp.ngd
-
-build/project.map.ncd build/project.pcf: build/project.ngd
-	@touch build/stamp.map ; $(call RUNNING,map)
-	cd build ; $(MAP) $(COMMON_OPTS) $(MAP_OPTS) -p $(FPGA_PART) -o project.map.ncd project.ngd project.pcf
-	@test build/project.map.ncd -nt build/stamp.map
-
-build/project.par.ncd: build/project.map.ncd build/project.pcf
-	@touch build/stamp.par ; $(call RUNNING,PAR)
-	cd build ; $(PAR) $(COMMON_OPTS) $(PAR_OPTS) -w project.map.ncd project.par.ncd project.pcf
-	@test build/project.par.ncd -nt build/stamp.par
-
-$(BITFILE): build/project.par.ncd
-	@touch build/stamp.bit ; $(call RUNNING,bitgen)
-	cd build ; $(BITGEN) $(COMMON_OPTS) $(BITGEN_OPTS) -w project.par.ncd $(BITFILE) && mv $(BITFILE) ..
-	@test $(BITFILE) -nt build/stamp.bit
-
+## You'll need to write an impact.cmd if you want to use this part.
+## A simple one looks like:
+##
+##    setMode -bscan
+##    setCable -p auto
+##    addDevice -p 1 -file build/projectname.bit
+##    program -p 1
+##    quit
+##
+## You may need to change this rule to something else entirely if your board
+## doesn't support Impact.
+prog: $(BITFILE)
+	$(XILINX)/impact -batch impact.cmd
