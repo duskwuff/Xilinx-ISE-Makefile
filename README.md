@@ -35,9 +35,9 @@ it consists of `KEY = value` pairs. It must define at least the following keys:
 
     The path to the appropriate binaries directory of the target Xilinx ISE
     install, e.g.
-    `/cygdrive/c/Xilinx/14.7/ISE_DS/ISE/bin/nt64`
+    `/cygdrive/c/Xilinx/14.7/ISE_DS/ISE`
     or
-    `/opt/Xilinx/14.7/ISE_DS/ISE/bin/lin64`
+    `/opt/Xilinx/14.7/ISE_DS/ISE`
     for typical installs.
 
   * `VSOURCE` and/or `VHDSOURCE`
@@ -61,6 +61,13 @@ A simple `project.cfg` may thus resemble:
 
 A number of other keys can be set in the project configuration, including:
 
+  * `XILINX_PLATFORM`
+
+    The Xilinx name for the platform to build for, e.g. `nt64` or `lin`.
+    `nt64` is used by default for Windows systems, and `lin64` for Linux
+    systems, so you only need to set this if you explicitly need to use the
+    32-bit version of the tools for some reason.
+
   * `TOPLEVEL`
 
     The name of the top-level module to be used in the project.
@@ -76,7 +83,8 @@ A number of other keys can be set in the project configuration, including:
     Extra command-line options to be passed to all ISE executables. Defaults to
     `-intstyle xflow`.
 
-  * `XST_OPTS`, `NGDBUILD_OPTS`, `MAP_OPTS`, `PAR_OPTS`, `BITGEN_OPTS`
+  * `XST_OPTS`, `NGDBUILD_OPTS`, `MAP_OPTS`, `PAR_OPTS`, `BITGEN_OPTS`,
+    `TRACE_OPTS`, `FUSE_OPTS`
 
     Extra command-line options to be passed to the corresponding ISE tools. All
     default to empty.
@@ -141,13 +149,17 @@ The Xilinx ISE Makefile implements the following targets:
     configuration; see below for details.
 
 
+Running unit tests
+------------------
+
+is a work in progress.
+
+
 Unimplemented features
 ----------------------
 
 The following features are not currently implemented. (Pull requests are
 encouraged!)
-
-  * Building and/or running testbenches
 
   * Generation of SPI or other unusual programming files
 
