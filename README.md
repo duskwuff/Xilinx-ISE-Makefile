@@ -116,7 +116,7 @@ A number of other keys can be set in the project configuration, including:
             program -p 1
             quit
 
-      * `djtg`
+      * `digilent`
 
         Uses the Digilent JTAG utility for programming, which must be installed
         separately. The name of the board must be set as `DJTG_DEVICE`; the

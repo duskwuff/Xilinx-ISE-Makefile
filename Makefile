@@ -146,9 +146,8 @@ build/isim_%$(EXE): build/$(PROJECT)_sim.prj $(VSOURCE) $(VHDSOURCE) $(VTEST) $(
 	    -o isim_$*$(EXE) \
 	    work.$* work.glbl
 
-#FIXME TB ?= $(error Must set TB to name of a testbench module)
-
 isim: build/isim_$(TB)$(EXE)
+	@grep --no-filename --no-messages 'ISIM:' $(TB).{v,vhd} | cut -d: -f2 > build/isim_$(TB).cmd
 	@echo "run all" >> build/isim_$(TB).cmd
 	cd build ; ./isim_$(TB)$(EXE) -tclbatch isim_$(TB).cmd
 
@@ -164,7 +163,7 @@ isimgui: build/isim_$(TB)$(EXE)
 
 ifeq ($(PROGRAMMER), impact)
 prog: $(BITFILE)
-	$(XILINX)/impact -batch $(IMPACT_OPTS)
+	$(XILINX)/bin/$(XILINX_PLATFORM)/impact $(IMPACT_OPTS)
 endif
 
 ifeq ($(PROGRAMMER), digilent)
