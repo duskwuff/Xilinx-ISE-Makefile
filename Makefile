@@ -50,6 +50,10 @@ XC3SPROG_EXE    ?= xc3sprog
 XC3SPROG_CABLE  ?= none
 XC3SPROG_OPTS   ?=
 
+PAPILIOPROG_EXE    ?= papilio-prog
+PAPILIOPROG_CABLE  ?= none
+PAPILIOPROG_OPTS   ?= -v
+
 
 ###########################################################################
 # Internal variables, platform-specific definitions, and macros
@@ -174,6 +178,11 @@ endif
 ifeq ($(PROGRAMMER), xc3sprog)
 prog: $(BITFILE)
 	$(XC3SPROG_EXE) -c $(XC3SPROG_CABLE) $(XC3SPROG_OPTS) $(BITFILE)
+endif
+
+ifeq ($(PROGRAMMER), papilio)
+prog: $(BITFILE)
+	$(PAPILIOPROG_EXE)  $(PAPILIOPROG_OPTS) -f $(BITFILE)
 endif
 
 ifeq ($(PROGRAMMER), none)
