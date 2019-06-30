@@ -139,6 +139,10 @@ The Xilinx ISE Makefile implements the following targets:
 
     Builds the bitstream.
 
+  * `make test`
+
+    Runs any testbenches.
+
   * `make clean`
 
     Removes the build directory.
@@ -152,7 +156,17 @@ The Xilinx ISE Makefile implements the following targets:
 Running unit tests
 ------------------
 
-is a work in progress.
+Test `test` target will build and run any testbenches that have been created.
+
+A testbench is any file with a file finishing in `_tb` (overridden by `TEST_POSTFIX`).
+
+
+Caviates
+--------
+
+ * Module names need to match the filename they are within.
+
+ * Module names cannot start with a number.
 
 
 Unimplemented features

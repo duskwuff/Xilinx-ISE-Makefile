@@ -38,6 +38,8 @@ BITGEN_OPTS     ?=
 TRACE_OPTS      ?=
 FUSE_OPTS       ?= -incremental
 
+TEST_POSTFIX	?= _tb
+
 PROGRAMMER      ?= none
 
 IMPACT_OPTS     ?= -batch impact.cmd
@@ -67,6 +69,8 @@ else
     PATH := $(PATH):$(XILINX)/bin/$(XILINX_PLATFORM)
 endif
 
+VTEST = $(foreach file,$(wildcard *$(TEST_POSTFIX).v),$(file))
+VHDTEST = $(foreach file,$(wildcard *$(TEST_POSTFIX).vhd),$(file))
 TEST_NAMES = $(foreach file,$(VTEST) $(VHDTEST),$(basename $(file)))
 TEST_EXES = $(foreach test,$(TEST_NAMES),build/isim_$(test)$(EXE))
 
@@ -138,23 +142,22 @@ trace: project.cfg $(BITFILE)
 	$(call RUN,trce) $(COMMON_OPTS) $(TRACE_OPTS) \
 	    $(PROJECT).ncd $(PROJECT).pcf
 
-test: $(TEST_EXES)
+test: buildtest runtest
 
-build/isim_%$(EXE): build/$(PROJECT)_sim.prj $(VSOURCE) $(VHDSOURCE) $(VTEST) $(VHDTEST)
+runtest: ${TEST_NAMES}
+
+${TEST_NAMES}:
+	@grep --no-filename --no-messages 'ISIM:' $@.{v,vhd} | cut -d: -f2 > build/isim_$@.cmd
+	@echo "run all" >> build/isim_$@.cmd
+	cd build ; ./isim_$@$(EXE) -tclbatch isim_$@.cmd ;
+
+buildtest: ${TEST_EXES}
+
+build/isim_%$(EXE): build/$(PROJECT)_sim.prj $(VSOURCE) $(VHDSOURCE) ${VTEST} $(VHDTEST)
 	$(call RUN,fuse) $(COMMON_OPTS) $(FUSE_OPTS) \
 	    -prj $(PROJECT)_sim.prj \
 	    -o isim_$*$(EXE) \
 	    work.$* work.glbl
-
-isim: build/isim_$(TB)$(EXE)
-	@grep --no-filename --no-messages 'ISIM:' $(TB).{v,vhd} | cut -d: -f2 > build/isim_$(TB).cmd
-	@echo "run all" >> build/isim_$(TB).cmd
-	cd build ; ./isim_$(TB)$(EXE) -tclbatch isim_$(TB).cmd
-
-isimgui: build/isim_$(TB)$(EXE)
-	@grep --no-filename --no-messages 'ISIM:' $(TB).{v,vhd} | cut -d: -f2 > build/isim_$(TB).cmd
-	@echo "run all" >> build/isim_$(TB).cmd
-	cd build ; ./isim_$(TB)$(EXE) -gui -tclbatch isim_$(TB).cmd
 
 
 ###########################################################################
